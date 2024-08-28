@@ -30,46 +30,104 @@ const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
 directionalLight.position.set(5, 8, 7.5); // Position it in a way that mimics sunlight
 scene.add(directionalLight);
 
+const cubegeo = new THREE.BoxGeometry(2, 2, 2);
+const cubemat = new THREE.MeshStandardMaterial({color: 0x3498db });
+const cube = new THREE.Mesh(cubegeo, cubemat);
+cube.position.set(5, 0, 5)
+scene.add(cube);
+
 
 // movement
 var moveSpeed = 10;
 const clock = new THREE.Clock();
 var delta;
 
-document.addEventListener('keydown', onDocumentKeyDown, false);
-function onDocumentKeyDown(event){
-    delta = clock.getDelta();
-    var keyCode = event.which;
-    if (keyCode==87) { // W
-        sphere.position.z -= moveSpeed * delta;
-        camera.position.z -= moveSpeed * delta;
-    } else if (keyCode==83) { // S
-        sphere.position.z += moveSpeed * delta;
-        camera.position.z += moveSpeed * delta;
-    } else if (keyCode==65) { // A
-        sphere.position.x -= moveSpeed * delta;
-        camera.position.x -= moveSpeed * delta;
-    } else if (keyCode==68) { // D
-        sphere.position.x += moveSpeed * delta;
-        camera.position.x += moveSpeed * delta;
-    } else if (keyCode==32) { // JUMP
-        sphere.position.y += moveSpeed * delta;
-        camera.position.y += moveSpeed * delta;
-    }
-    animate();
+// Movement direction tracking
+const movement = {
+    forward: false,
+    backward: false,
+    left: false,
+    right: false,
+    up: false
+};
+// bounds of map area
+const mapBounds = {
+    xMin: -1000,
+    xMax: 1000,
+    zMin: -1000,
+    zMax: 1000,
+    yMin: 0,  
+    yMax: 50  
 };
 
-const cubegeo = new THREE.BoxGeometry(2, 2, 2);
-const cubemat = new THREE.MeshStandardMaterial({color: 0x3498db });
-const cube = new THREE.Mesh(cubegeo, cubemat);
-scene.add(cube);
+document.addEventListener('keydown', onDocumentKeyDown, false);
+document.addEventListener('keyup', onDocumentKeyUp, false);
 
+function onDocumentKeyDown(event) {
+    var keyCode = event.which;
+    if (keyCode == 87) { // W
+        movement.forward = true;
+    } else if (keyCode == 83) { // S
+        movement.backward = true;
+    } else if (keyCode == 65) { // A
+        movement.left = true;
+    } else if (keyCode == 68) { // D
+        movement.right = true;
+    } else if (keyCode == 32) { // Space (Jump)
+        movement.up = true;
+    }
+}
+
+function onDocumentKeyUp(event) {
+    var keyCode = event.which;
+    if (keyCode == 87) { // W
+        movement.forward = false;
+    } else if (keyCode == 83) { // S
+        movement.backward = false;
+    } else if (keyCode == 65) { // A
+        movement.left = false;
+    } else if (keyCode == 68) { // D
+        movement.right = false;
+    } else if (keyCode == 32) { // Space (Jump)
+        movement.up = false;
+    }
+}
+
+// make sure camera follows player
+function updateCameraPosition() {
+    camera.position.x = sphere.position.x + 10;  // Adjust these values based on desired camera angle
+    camera.position.z = sphere.position.z + 10;
+    camera.lookAt(sphere.position);
+}
 
 // Render loop
 function animate() {
     requestAnimationFrame(animate);
+    delta = clock.getDelta();
+
+    // Apply movement
+    if (movement.forward && sphere.position.z - moveSpeed * delta > mapBounds.zMin) {
+        sphere.position.z -= moveSpeed * delta;
+    }
+    if (movement.backward && sphere.position.z + moveSpeed * delta < mapBounds.zMax) {
+        sphere.position.z += moveSpeed * delta;
+    }
+    if (movement.left && sphere.position.x - moveSpeed * delta > mapBounds.xMin) {
+        sphere.position.x -= moveSpeed * delta;
+    }
+    if (movement.right && sphere.position.x + moveSpeed * delta < mapBounds.xMax) {
+        sphere.position.x += moveSpeed * delta;
+    }
+    if (movement.up && sphere.position.y + moveSpeed * delta < mapBounds.yMax) {
+        sphere.position.y += moveSpeed * delta;
+    } else if (sphere.position.y > mapBounds.yMin) {  // Gravity effect
+        sphere.position.y -= moveSpeed * delta * 0.5; // Adjust gravity strength as needed
+    }
+
     sphere.rotation.x += 0.01;
     sphere.rotation.y += 0.01;
+
     renderer.render(scene, camera);
+    updateCameraPosition();
 }
 animate();
