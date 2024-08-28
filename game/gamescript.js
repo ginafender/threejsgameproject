@@ -33,9 +33,35 @@ scene.add(directionalLight);
 const cubegeo = new THREE.BoxGeometry(2, 2, 2);
 const cubemat = new THREE.MeshStandardMaterial({color: 0x3498db });
 const cube = new THREE.Mesh(cubegeo, cubemat);
-cube.position.set(5, 0, 5)
+cube.position.set(0, 0, 0);
 scene.add(cube);
 
+// map border
+const linemat = new THREE.LineBasicMaterial({ color : 0x0000ff });
+const line1points = [];
+line1points.push(new THREE.Vector3(-200, 0, 200));
+line1points.push(new THREE.Vector3(-200, 0, -200));
+const line1geo = new THREE.BufferGeometry().setFromPoints(line1points);
+const line1 = new THREE.Line(line1geo, linemat);
+scene.add(line1);
+const line2points = [];
+line2points.push(new THREE.Vector3(200, 0, -200));
+line2points.push(new THREE.Vector3(-200, 0, -200));
+const line2geo = new THREE.BufferGeometry().setFromPoints(line2points);
+const line2 = new THREE.Line(line2geo, linemat);
+scene.add(line2);
+const line3points = [];
+line3points.push(new THREE.Vector3(200, 0, -200));
+line3points.push(new THREE.Vector3(200, 0, 200));
+const line3geo = new THREE.BufferGeometry().setFromPoints(line3points);
+const line3 = new THREE.Line(line3geo, linemat);
+scene.add(line3);
+const line4points = [];
+line4points.push(new THREE.Vector3(200, 0, 200));
+line4points.push(new THREE.Vector3(-200, 0, 200));
+const line4geo = new THREE.BufferGeometry().setFromPoints(line4points);
+const line4 = new THREE.Line(line4geo, linemat);
+scene.add(line4);
 
 // movement
 var moveSpeed = 10;
@@ -52,10 +78,10 @@ const movement = {
 };
 // bounds of map area
 const mapBounds = {
-    xMin: -1000,
-    xMax: 1000,
-    zMin: -1000,
-    zMax: 1000,
+    xMin: -250,
+    xMax: 250,
+    zMin: -250,
+    zMax: 250,
     yMin: 0,  
     yMax: 50  
 };
@@ -73,9 +99,7 @@ function onDocumentKeyDown(event) {
         movement.left = true;
     } else if (keyCode == 68) { // D
         movement.right = true;
-    } else if (keyCode == 32) { // Space (Jump)
-        movement.up = true;
-    }
+    } 
 }
 
 function onDocumentKeyUp(event) {
@@ -88,9 +112,7 @@ function onDocumentKeyUp(event) {
         movement.left = false;
     } else if (keyCode == 68) { // D
         movement.right = false;
-    } else if (keyCode == 32) { // Space (Jump)
-        movement.up = false;
-    }
+    } 
 }
 
 // make sure camera follows player
@@ -107,21 +129,20 @@ function animate() {
 
     // Apply movement
     if (movement.forward && sphere.position.z - moveSpeed * delta > mapBounds.zMin) {
+        console.log("w");
         sphere.position.z -= moveSpeed * delta;
     }
     if (movement.backward && sphere.position.z + moveSpeed * delta < mapBounds.zMax) {
+        console.log("s");
         sphere.position.z += moveSpeed * delta;
     }
     if (movement.left && sphere.position.x - moveSpeed * delta > mapBounds.xMin) {
+        console.log("a");
         sphere.position.x -= moveSpeed * delta;
     }
     if (movement.right && sphere.position.x + moveSpeed * delta < mapBounds.xMax) {
+        console.log("d");
         sphere.position.x += moveSpeed * delta;
-    }
-    if (movement.up && sphere.position.y + moveSpeed * delta < mapBounds.yMax) {
-        sphere.position.y += moveSpeed * delta;
-    } else if (sphere.position.y > mapBounds.yMin) {  // Gravity effect
-        sphere.position.y -= moveSpeed * delta * 0.5; // Adjust gravity strength as needed
     }
 
     sphere.rotation.x += 0.01;
