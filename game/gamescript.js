@@ -1,4 +1,6 @@
-import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.152.0/build/three.module.js';
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 
 const scene = new THREE.Scene();
@@ -11,11 +13,18 @@ renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-camera.position.set(10, 15, 10); // Position the camera above and to the side
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enabled = false; 
+
+var isRightMouseButtonPressed = false;
+
+
+// Set initial camera position behind and above the player
+camera.position.set(10, 15, 10);
 camera.lookAt(0, 0, 0);
 
 renderer.render(scene, camera);
-renderer.setClearColor(0x2ecc71)
+renderer.setClearColor(0x2ecc71);
 
 
 const geometry = new THREE.SphereGeometry(1, 32, 32); // (radius, widthSegments, heightSegments)
@@ -30,38 +39,35 @@ const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
 directionalLight.position.set(5, 8, 7.5); // Position it in a way that mimics sunlight
 scene.add(directionalLight);
 
+// Add cubes to the scene
 const cubegeo = new THREE.BoxGeometry(2, 2, 2);
-const cubemat = new THREE.MeshStandardMaterial({color: 0x3498db });
-const cube = new THREE.Mesh(cubegeo, cubemat);
-cube.position.set(0, 0, 0);
-scene.add(cube);
+const cubemat = new THREE.MeshStandardMaterial({ color: 0x3498db });
+const cubes = [];
+const cubePositions = [
+    [0, 0, 0], [10, 0, 10], [-10, 0, -10], [-10, 0, 10], [10, 0, -10]
+];
 
-// map border
-const linemat = new THREE.LineBasicMaterial({ color : 0x0000ff });
-const line1points = [];
-line1points.push(new THREE.Vector3(-200, 0, 200));
-line1points.push(new THREE.Vector3(-200, 0, -200));
-const line1geo = new THREE.BufferGeometry().setFromPoints(line1points);
-const line1 = new THREE.Line(line1geo, linemat);
-scene.add(line1);
-const line2points = [];
-line2points.push(new THREE.Vector3(200, 0, -200));
-line2points.push(new THREE.Vector3(-200, 0, -200));
-const line2geo = new THREE.BufferGeometry().setFromPoints(line2points);
-const line2 = new THREE.Line(line2geo, linemat);
-scene.add(line2);
-const line3points = [];
-line3points.push(new THREE.Vector3(200, 0, -200));
-line3points.push(new THREE.Vector3(200, 0, 200));
-const line3geo = new THREE.BufferGeometry().setFromPoints(line3points);
-const line3 = new THREE.Line(line3geo, linemat);
-scene.add(line3);
-const line4points = [];
-line4points.push(new THREE.Vector3(200, 0, 200));
-line4points.push(new THREE.Vector3(-200, 0, 200));
-const line4geo = new THREE.BufferGeometry().setFromPoints(line4points);
-const line4 = new THREE.Line(line4geo, linemat);
-scene.add(line4);
+cubePositions.forEach((pos) => {
+    const cube = new THREE.Mesh(cubegeo, cubemat);
+    cube.position.set(...pos);
+    cubes.push(cube);
+    scene.add(cube);
+});
+
+// Map borders
+const linemat = new THREE.LineBasicMaterial({ color: 0x0000ff });
+const borderPoints = [
+    [[-200, 0, 200], [-200, 0, -200]],
+    [[-200, 0, -200], [200, 0, -200]],
+    [[200, 0, -200], [200, 0, 200]],
+    [[200, 0, 200], [-200, 0, 200]]
+];
+
+borderPoints.forEach((points) => {
+    const geo = new THREE.BufferGeometry().setFromPoints(points.map(p => new THREE.Vector3(...p)));
+    const line = new THREE.Line(geo, linemat);
+    scene.add(line);
+});
 
 // movement
 var moveSpeed = 10;
@@ -88,6 +94,9 @@ const mapBounds = {
 
 document.addEventListener('keydown', onDocumentKeyDown, false);
 document.addEventListener('keyup', onDocumentKeyUp, false);
+document.addEventListener('mousedown', onDocumentMouseDown, false);
+document.addEventListener('mouseup', onDocumentMouseUp, false);
+document.addEventListener('contextmenu', onContextMenu, false);
 
 function onDocumentKeyDown(event) {
     var keyCode = event.which;
@@ -115,33 +124,53 @@ function onDocumentKeyUp(event) {
     } 
 }
 
-// make sure camera follows player
-function updateCameraPosition() {
-    camera.position.x = sphere.position.x + 10;  // Adjust these values based on desired camera angle
-    camera.position.z = sphere.position.z + 10;
-    camera.lookAt(sphere.position);
+function onDocumentMouseDown(event) {
+    event.preventDefault();
+    if (event.button === 2) {
+        isRightMouseButtonPressed = true;
+        controls.enabled = true; // Enable rotation on right click
+    }
 }
 
+function onDocumentMouseUp(event) {
+    event.preventDefault();
+    if (event.button === 2) {
+        isRightMouseButtonPressed = false;
+        controls.enabled = false; // Disable rotation when right click is released
+    }
+}
+
+function onContextMenu(event) {
+    event.preventDefault(); // Prevent context menu
+}
+
+function updateCameraPosition() {
+    if (!isRightMouseButtonPressed) {
+        camera.position.x = sphere.position.x + 10; 
+        camera.position.z = sphere.position.z + 10;
+        camera.lookAt(sphere.position);
+    }
+}
 // Render loop
 function animate() {
-    requestAnimationFrame(animate);
+    window.requestAnimationFrame(animate);
     delta = clock.getDelta();
 
     // Apply movement
     if (movement.forward && sphere.position.z - moveSpeed * delta > mapBounds.zMin) {
-        console.log("w");
+        // console.log("w");
         sphere.position.z -= moveSpeed * delta;
     }
     if (movement.backward && sphere.position.z + moveSpeed * delta < mapBounds.zMax) {
-        console.log("s");
+        // console.log("s");
         sphere.position.z += moveSpeed * delta;
     }
     if (movement.left && sphere.position.x - moveSpeed * delta > mapBounds.xMin) {
-        console.log("a");
+        // console.log("a");
         sphere.position.x -= moveSpeed * delta;
     }
     if (movement.right && sphere.position.x + moveSpeed * delta < mapBounds.xMax) {
-        console.log("d");
+        // console.log("d");
         sphere.position.x += moveSpeed * delta;
     }
 
