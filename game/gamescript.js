@@ -2,6 +2,10 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
+window.addEventListener('contextmenu', function (event) {
+    event.preventDefault();
+});
+
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 const renderer = new THREE.WebGLRenderer({
@@ -13,22 +17,25 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enabled = false; 
+controls.enableKeys = false;
 
 const geometry = new THREE.SphereGeometry(1, 32, 32); // (radius, widthSegments, heightSegments)
 const material = new THREE.MeshStandardMaterial({ color: 0xe67e22 });
 const sphere = new THREE.Mesh(geometry, material);
 scene.add(sphere);
 
+controls.mouseButtons = {
+    LEFT: THREE.MOUSE.NONE,
+    MIDDLE: THREE.MOUSE.NONE, 
+    RIGHT: THREE.MOUSE.ROTATE 
+};
+
 // Set initial camera position behind and above the player
 camera.position.set(10, 15, 10);
-camera.lookAt(0, 0, 0);
+controls.target.set(0, 0, 0);
 renderer.render(scene, camera);
 renderer.setClearColor(0x2ecc71);
-// Rotation settings
-controls.target = sphere.position;
-controls.minDistance = 10; // zoom in
-controls.maxDistance = 25; // zoom out
-controls.zoomSpeed = .5;
+controls.update();
 
 
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
@@ -37,6 +44,15 @@ scene.add(ambientLight);
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
 directionalLight.position.set(5, 8, 7.5); // Position it in a way that mimics sunlight
 scene.add(directionalLight);
+
+// 1. Create the floor geometry (width, height, widthSegments, heightSegments)
+const floorGeometry = new THREE.PlaneGeometry(500, 500);
+const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x808080 });
+const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+floor.rotation.x = -Math.PI / 2;
+floor.position.y = -1;
+scene.add(floor);
+
 
 // Add cubes to the scene
 const cubegeo = new THREE.BoxGeometry(2, 2, 2);
@@ -93,9 +109,21 @@ const mapBounds = {
 
 document.addEventListener('keydown', onDocumentKeyDown, false);
 document.addEventListener('keyup', onDocumentKeyUp, false);
-// document.addEventListener('mousedown', onDocumentMouseDown, false);
-// document.addEventListener('mouseup', onDocumentMouseUp, false);
-// document.addEventListener('contextmenu', onContextMenu, false);
+
+
+document.addEventListener('mousedown', (event) => {
+    if (event.button === 2) { // Right click
+        controls.enabled = true;
+        event.preventDefault();
+    }
+});
+
+document.addEventListener('mouseup', (event) => {
+    if (event.button === 2) { // Right click
+        controls.enabled = false;
+        event.preventDefault();
+    }
+});
 
 function onDocumentKeyDown(event) {
     var keyCode = event.which;
@@ -123,27 +151,13 @@ function onDocumentKeyUp(event) {
     } 
 }
 
-// function onDocumentMouseDown(event) {
-//     event.preventDefault();
-//     if (event.button === 2) {
-//         isRightMouseButtonPressed = true;
-//         controls.enabled = true; // Enable rotation on right click
-//     }
-// }
-
-// function onDocumentMouseUp(event) {
-//     event.preventDefault();
-//     if (event.button === 2) {
-//         isRightMouseButtonPressed = false;
-//         controls.enabled = false; // Disable rotation when right click is released
-//     }
-// }
-
-// function updateCameraPosition() {
-//         camera.position.x = sphere.position.x + 10; 
-//         camera.position.z = sphere.position.z + 10;
-//         camera.lookAt(sphere.position);
-// }
+function updateCameraPosition() {
+    camera.position.x = sphere.position.x + 10; 
+    camera.position.z = sphere.position.z + 10;
+    camera.position.y = sphere.position.y + 15;
+    controls.target.set(sphere.position.x, sphere.position.y, sphere.position.z);
+    camera.lookAt(sphere.position);
+}
 // Render loop
 function animate() {
     window.requestAnimationFrame(animate);
@@ -170,8 +184,8 @@ function animate() {
     sphere.rotation.x += 0.01;
     sphere.rotation.y += 0.01;
 
-    renderer.render(scene, camera);
-    // updateCameraPosition();
+    updateCameraPosition();
     controls.update();
+    renderer.render(scene, camera);
 }
 animate();
