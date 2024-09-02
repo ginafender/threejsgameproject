@@ -16,27 +16,24 @@ renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 const controls = new OrbitControls(camera, renderer.domElement);
-controls.enabled = false; 
-controls.enableKeys = false;
 
-const geometry = new THREE.SphereGeometry(1, 32, 32); // (radius, widthSegments, heightSegments)
+const geometry = new THREE.SphereGeometry(1, 32, 32); // (radius, width, height)
 const material = new THREE.MeshStandardMaterial({ color: 0xe67e22 });
 const sphere = new THREE.Mesh(geometry, material);
 scene.add(sphere);
 
-controls.mouseButtons = {
-    LEFT: THREE.MOUSE.NONE,
-    MIDDLE: THREE.MOUSE.NONE, 
-    RIGHT: THREE.MOUSE.ROTATE 
-};
 
 // Set initial camera position behind and above the player
 camera.position.set(10, 15, 10);
-controls.target.set(0, 0, 0);
+controls.enableKeys = false;
+// controls.target.set(sphere.position.x, sphere.position.y, sphere.position.z);
 renderer.render(scene, camera);
 renderer.setClearColor(0x2ecc71);
 controls.update();
 
+controls.mouseButtons.RIGHT = THREE.MOUSE.RIGHT;
+controls.mouseButtons.LEFT = THREE.MOUSE.LEFT;
+controls.mouseButtons.MIDDLE = THREE.MOUSE.MIDDLE;
 
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
 scene.add(ambientLight);
@@ -110,22 +107,9 @@ const mapBounds = {
 document.addEventListener('keydown', onDocumentKeyDown, false);
 document.addEventListener('keyup', onDocumentKeyUp, false);
 
-
-document.addEventListener('mousedown', (event) => {
-    if (event.button === 2) { // Right click
-        controls.enabled = true;
-        event.preventDefault();
-    }
-});
-
-document.addEventListener('mouseup', (event) => {
-    if (event.button === 2) { // Right click
-        controls.enabled = false;
-        event.preventDefault();
-    }
-});
-
+controls.saveState();
 function onDocumentKeyDown(event) {
+    controls.reset();
     var keyCode = event.which;
     if (keyCode == 87) { // W
         movement.forward = true;
@@ -151,12 +135,28 @@ function onDocumentKeyUp(event) {
     } 
 }
 
+let lastPosition = new THREE.Vector3();
+
+// Initial setup to save the player's initial position
+lastPosition.copy(sphere.position);
+
 function updateCameraPosition() {
     camera.position.x = sphere.position.x + 10; 
     camera.position.z = sphere.position.z + 10;
     camera.position.y = sphere.position.y + 15;
-    controls.target.set(sphere.position.x, sphere.position.y, sphere.position.z);
     camera.lookAt(sphere.position);
+
+    // Only update controls.target if the player has moved
+    if (!sphere.position.equals(lastPosition)) {
+        controls.target.set(
+            sphere.position.x,
+            sphere.position.y,
+            sphere.position.z
+        );
+        lastPosition.copy(sphere.position);  // Update the last position
+    }
+    
+    controls.update();
 }
 // Render loop
 function animate() {
@@ -183,9 +183,7 @@ function animate() {
 
     sphere.rotation.x += 0.01;
     sphere.rotation.y += 0.01;
-
     updateCameraPosition();
-    controls.update();
     renderer.render(scene, camera);
 }
 animate();
