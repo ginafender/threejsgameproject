@@ -14,21 +14,31 @@ const renderer = new THREE.WebGLRenderer({
 
 renderer.setPixelRatio(window.devicePixelRatio);
 renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setClearColor(0x5dade2);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.body.appendChild(renderer.domElement);
 const controls = new OrbitControls(camera, renderer.domElement);
 
 const geometry = new THREE.SphereGeometry(1, 32, 32); // (radius, width, height)
 const material = new THREE.MeshStandardMaterial({ color: 0xeb984e  });
 const sphere = new THREE.Mesh(geometry, material);
+sphere.castShadow = true;
+sphere.receiveShadow = true;
+sphere.position.set(0, 1, 0);
 scene.add(sphere);
 
+// sphere collision
+let sphereColl = new THREE.Sphere(sphere.position, 1);
+
 // Set initial camera position behind and above the player
-camera.position.set(10, 5, 10);
+camera.position.set(0, 5, 10);
 controls.enableKeys = false;
 controls.minPolarAngle = 0; // Looking straight up
 controls.maxPolarAngle = Math.PI / 2;
+controls.minDistance = 5;
+controls.maxDistance = 30;
 renderer.render(scene, camera);
-renderer.setClearColor(0x5dade2);
 controls.update();
 
 controls.mouseButtons.RIGHT = THREE.MOUSE.RIGHT;
@@ -40,34 +50,45 @@ controls.mouseButtons = {
 	RIGHT: THREE.MOUSE.ROTATE
 }
 
-
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
 scene.add(ambientLight);
 
-const directionalLight = new THREE.DirectionalLight(0xffffff, .5);
-directionalLight.position.set(5, 8, 7.5); 
+const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+directionalLight.position.set(50, 200, -250); 
+directionalLight.castShadow = true;
+directionalLight.shadow.mapSize.width = 4096;
+directionalLight.shadow.mapSize.height = 4096;
+directionalLight.shadow.camera.near = 1; 
+directionalLight.shadow.camera.far = 500; 
+directionalLight.shadow.camera.left = -250;
+directionalLight.shadow.camera.right = 250;
+directionalLight.shadow.camera.top = 250;
+directionalLight.shadow.camera.bottom = -250;
+directionalLight.target.position.set(0, 0, 0);
 scene.add(directionalLight);
 
 // floor geometry (width, height, width, height)
 const floorGeometry = new THREE.PlaneGeometry(500, 500);
 const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x2ecc71 });
 const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+floor.receiveShadow = true;
 floor.rotation.x = -Math.PI / 2;
-floor.position.y = -1;
+floor.position.y = 0;
 scene.add(floor);
-
 
 // Add cubes to the scene
 const cubegeo = new THREE.BoxGeometry(2, 2, 2);
 const cubemat = new THREE.MeshStandardMaterial({ color: 0x3498db });
 const cubes = [];
 const cubePositions = [
-    [0, 0, 0], [10, 0, 10], [-10, 0, -10], [-10, 0, 10], [10, 0, -10]
+    [10, 1, 10], [-10, 1, -10], [-10, 1, 10], [10, 1, -10]
 ];
 
 cubePositions.forEach((pos) => {
     const cube = new THREE.Mesh(cubegeo, cubemat);
     cube.position.set(...pos);
+    cube.castShadow = true;
+    cube.receiveShadow = true;
     cubes.push(cube);
     scene.add(cube);
 });
@@ -143,21 +164,24 @@ function onDocumentKeyUp(event) {
 
 let lastPosition = new THREE.Vector3();
 
-// Initial setup to save the player's initial position
+// Initially save the player's initial position
 lastPosition.copy(sphere.position);
 let isMoving = false;
 
 function updateCameraPosition() {
+    const direction = new THREE.Vector3();
+    sphere.getWorldDirection(direction);
+    const offset = -10;  // Distance behind the player
+    const height = 5;   // Height above the player
     // Check if the sphere has moved
     if (!sphere.position.equals(lastPosition)) {
-        isMoving = true;
-        // Move the camera to follow the sphere
         camera.position.set(
-            sphere.position.x + 10, 
-            sphere.position.y + 5,
-            sphere.position.z + 10
+            sphere.position.x - direction.x * offset,
+            sphere.position.y + height,
+            sphere.position.z - direction.z * offset
         );
         camera.lookAt(sphere.position);
+        isMoving = true;
         lastPosition.copy(sphere.position);
         controls.enabled = false;
     } else {
@@ -177,27 +201,18 @@ function updateCameraPosition() {
 function animate() {
     window.requestAnimationFrame(animate);
     delta = clock.getDelta();
-
-    // Apply movement
     if (movement.forward && sphere.position.z - moveSpeed * delta > mapBounds.zMin) {
         // console.log("w");
-        sphere.position.z -= moveSpeed * delta;
-    }
+        sphere.position.z -= moveSpeed * delta;}
     if (movement.backward && sphere.position.z + moveSpeed * delta < mapBounds.zMax) {
         // console.log("s");
-        sphere.position.z += moveSpeed * delta;
-    }
+        sphere.position.z += moveSpeed * delta;}
     if (movement.left && sphere.position.x - moveSpeed * delta > mapBounds.xMin) {
         // console.log("a");
-        sphere.position.x -= moveSpeed * delta;
-    }
+        sphere.position.x -= moveSpeed * delta;}
     if (movement.right && sphere.position.x + moveSpeed * delta < mapBounds.xMax) {
         // console.log("d");
-        sphere.position.x += moveSpeed * delta;
-    }
-
-    sphere.rotation.x += 0.01;
-    sphere.rotation.y += 0.01;
+        sphere.position.x += moveSpeed * delta;}
     updateCameraPosition();
     renderer.render(scene, camera);
 }
