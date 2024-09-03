@@ -18,33 +18,39 @@ document.body.appendChild(renderer.domElement);
 const controls = new OrbitControls(camera, renderer.domElement);
 
 const geometry = new THREE.SphereGeometry(1, 32, 32); // (radius, width, height)
-const material = new THREE.MeshStandardMaterial({ color: 0xe67e22 });
+const material = new THREE.MeshStandardMaterial({ color: 0xeb984e  });
 const sphere = new THREE.Mesh(geometry, material);
 scene.add(sphere);
 
-
 // Set initial camera position behind and above the player
-camera.position.set(10, 15, 10);
+camera.position.set(10, 5, 10);
 controls.enableKeys = false;
-// controls.target.set(sphere.position.x, sphere.position.y, sphere.position.z);
+controls.minPolarAngle = 0; // Looking straight up
+controls.maxPolarAngle = Math.PI / 2;
 renderer.render(scene, camera);
-renderer.setClearColor(0x2ecc71);
+renderer.setClearColor(0x5dade2);
 controls.update();
 
 controls.mouseButtons.RIGHT = THREE.MOUSE.RIGHT;
 controls.mouseButtons.LEFT = THREE.MOUSE.LEFT;
 controls.mouseButtons.MIDDLE = THREE.MOUSE.MIDDLE;
+controls.mouseButtons = {
+	LEFT: THREE.MOUSE.NONE,
+	MIDDLE: THREE.MOUSE.NONE,
+	RIGHT: THREE.MOUSE.ROTATE
+}
+
 
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
 scene.add(ambientLight);
 
-const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
-directionalLight.position.set(5, 8, 7.5); // Position it in a way that mimics sunlight
+const directionalLight = new THREE.DirectionalLight(0xffffff, .5);
+directionalLight.position.set(5, 8, 7.5); 
 scene.add(directionalLight);
 
-// 1. Create the floor geometry (width, height, widthSegments, heightSegments)
+// floor geometry (width, height, width, height)
 const floorGeometry = new THREE.PlaneGeometry(500, 500);
-const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x808080 });
+const floorMaterial = new THREE.MeshStandardMaterial({ color: 0x2ecc71 });
 const floor = new THREE.Mesh(floorGeometry, floorMaterial);
 floor.rotation.x = -Math.PI / 2;
 floor.position.y = -1;
@@ -139,25 +145,34 @@ let lastPosition = new THREE.Vector3();
 
 // Initial setup to save the player's initial position
 lastPosition.copy(sphere.position);
+let isMoving = false;
 
 function updateCameraPosition() {
-    camera.position.x = sphere.position.x + 10; 
-    camera.position.z = sphere.position.z + 10;
-    camera.position.y = sphere.position.y + 15;
-    camera.lookAt(sphere.position);
-
-    // Only update controls.target if the player has moved
+    // Check if the sphere has moved
     if (!sphere.position.equals(lastPosition)) {
-        controls.target.set(
-            sphere.position.x,
-            sphere.position.y,
-            sphere.position.z
+        isMoving = true;
+        // Move the camera to follow the sphere
+        camera.position.set(
+            sphere.position.x + 10, 
+            sphere.position.y + 5,
+            sphere.position.z + 10
         );
-        lastPosition.copy(sphere.position);  // Update the last position
+        camera.lookAt(sphere.position);
+        lastPosition.copy(sphere.position);
+        controls.enabled = false;
+    } else {
+        if (isMoving) {
+            // Enable orbit controls when the sphere stops moving
+            controls.target.copy(sphere.position);
+            controls.enabled = true;
+            controls.update();
+            isMoving = false;
+        } else {
+            controls.update();
+        }
     }
-    
-    controls.update();
 }
+
 // Render loop
 function animate() {
     window.requestAnimationFrame(animate);
