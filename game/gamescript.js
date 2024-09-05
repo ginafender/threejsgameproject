@@ -32,7 +32,7 @@ scene.add(sphere);
 let sphereColl = new THREE.Sphere(sphere.position, 1);
 
 // Set initial camera position behind and above the player
-camera.position.set(0, 5, 10);
+camera.position.set(0, 10, 25);
 controls.enableKeys = false;
 controls.minPolarAngle = 0; // Looking straight up
 controls.maxPolarAngle = Math.PI / 2;
@@ -171,8 +171,8 @@ let isMoving = false;
 function updateCameraPosition() {
     const direction = new THREE.Vector3();
     sphere.getWorldDirection(direction);
-    const offset = -10;  // Distance behind the player
-    const height = 5;   // Height above the player
+    const offset = -25;  // Distance behind the player
+    const height = 10;   // Height above the player
     // Check if the sphere has moved
     if (!sphere.position.equals(lastPosition)) {
         camera.position.set(
@@ -196,6 +196,9 @@ function updateCameraPosition() {
         }
     }
 }
+function checkCollisions(){
+
+}
 
 // Render loop
 function animate() {
@@ -213,6 +216,11 @@ function animate() {
     if (movement.right && sphere.position.x + moveSpeed * delta < mapBounds.xMax) {
         // console.log("d");
         sphere.position.x += moveSpeed * delta;}
+
+    // collisions
+    sphereColl.copy(sphere.geometry.boundingSphere).applyMatrix4(sphere.matrixWorld);
+    checkCollisions();
+
     updateCameraPosition();
     renderer.render(scene, camera);
 }
